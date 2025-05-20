@@ -1,6 +1,7 @@
 'use server';
 
 import { ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3';
+import { createClient } from '@supabase/supabase-js';
 
 const s3 = new S3Client({
   region: 'us-east-2',
@@ -19,7 +20,7 @@ export default async function getListOfObjects() {
         Bucket: bucketName,
       })
     );
-    console.log('Success', data);
+
     if (data.Contents) {
       return data.Contents.map((object) => object.Key);
     }
@@ -29,4 +30,20 @@ export default async function getListOfObjects() {
     console.error('Error fetching objects:', error);
     throw error;
   }
+}
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+);
+
+export async function getListOfSongs() {
+  const { data, error } = await supabase.from('songs').select('*');
+
+  if (error) {
+    console.error('Error fetching songs:', error);
+    return [];
+  }
+
+  return data;
 }
