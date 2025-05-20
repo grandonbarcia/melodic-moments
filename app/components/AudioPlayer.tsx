@@ -254,11 +254,28 @@ export default function AudioPlayer() {
                 setIsPlaying(true);
               }}
             >
-              <span className="truncate">
-                {song.artist} — {song.name}
-              </span>
+              <div className="flex flex-col flex-1 min-w-0">
+                <span
+                  className={`truncate font-semibold text-base leading-tight ${
+                    idx === currIndex
+                      ? 'text-white'
+                      : 'text-zinc-900 dark:text-zinc-100'
+                  }`}
+                >
+                  {song.name}
+                </span>
+                <span
+                  className={`truncate text-xs uppercase tracking-wider ${
+                    idx === currIndex
+                      ? 'text-zinc-200/80'
+                      : 'text-zinc-500 dark:text-zinc-400'
+                  }`}
+                >
+                  {song.artist}
+                </span>
+              </div>
               {idx === currIndex && isPlaying && (
-                <FaPlay className="text-white drop-shadow" />
+                <FaPlay className="text-white drop-shadow ml-2" />
               )}
             </div>
           ))}
