@@ -2,72 +2,82 @@
 
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { FaPlay } from 'react-icons/fa';
-import { FaPause } from 'react-icons/fa';
-import { FaForwardStep } from 'react-icons/fa6';
-import { FaStepBackward } from 'react-icons/fa';
+import {
+  FaPlay,
+  FaPause,
+  FaStepBackward,
+  FaStepForward,
+  FaVolumeUp,
+} from 'react-icons/fa';
 import { useEffect, useRef, useState } from 'react';
-import getListOfObjects from '../actions/actions';
+import { getListOfSongs } from '../actions/actions';
 
-const API = `https://melodic-moments.s3.us-east-2.amazonaws.com/`;
+type Song = {
+  id: number;
+  created_at: string;
+  artist: string;
+  genre: string;
+  art: string;
+  name: string;
+  url: string;
+};
+
+function formatTime(sec: number) {
+  const minutes = Math.floor(sec / 60);
+  const seconds = Math.floor(sec % 60);
+  return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+}
 
 export default function AudioPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [listOfSongs, setListOfSongs] = useState<string[]>([]);
-  const [currSong, setCurrSong] = useState<string | null>(null);
+  const [listOfSongs, setListOfSongs] = useState<Song[]>([]);
+  const [currIndex, setCurrIndex] = useState(0);
+  const [volume, setVolume] = useState(1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    const fetchObjects = async () => {
-      try {
-        const data = await getListOfObjects();
-        const filteredData = data.filter(
-          (item): item is string => typeof item === 'string'
-        );
-        setListOfSongs(filteredData);
-        setCurrSong(API + filteredData[0]);
-      } catch (error) {
-        console.error('Error fetching objects:', error);
-      }
+    const fetchListOfSongs = async () => {
+      const songs = await getListOfSongs();
+      setListOfSongs(songs);
+      setCurrIndex(0);
     };
-    fetchObjects();
+    fetchListOfSongs();
   }, []);
 
-  const togglePlay = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (isPlaying) {
-      audio.pause();
-    } else {
-      audio.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
+  useEffect(() => {
+    setCurrentTime(0);
+    setDuration(0);
+  }, [currIndex]);
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (isPlaying) {
-      if (audio) {
-        audio.play();
-      }
+    if (isPlaying && audio) {
+      audio.play();
+    } else if (audio) {
+      audio.pause();
     }
-  }, [currSong, isPlaying]);
+  }, [isPlaying, currIndex]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
+  const currSong = listOfSongs[currIndex];
+
+  const togglePlay = () => setIsPlaying((p) => !p);
 
   const handleTimeUpdate = () => {
     const audio = audioRef.current;
-    if (audio) {
-      setCurrentTime(Math.floor(audio.currentTime));
-    }
+    if (audio) setCurrentTime(audio.currentTime);
   };
 
   const handleLoadedMetadata = () => {
     const audio = audioRef.current;
-    if (audio) {
-      setDuration(audio.duration);
-    }
+    if (audio) setDuration(audio.duration);
   };
 
   const handleSliderChange = (value: number) => {
@@ -78,46 +88,185 @@ export default function AudioPlayer() {
     }
   };
 
+  const playPrev = () => {
+    setCurrIndex((i) => (i > 0 ? i - 1 : listOfSongs.length - 1));
+    setIsPlaying(true);
+  };
+
+  const playNext = () => {
+    setCurrIndex((i) => (i < listOfSongs.length - 1 ? i + 1 : 0));
+    setIsPlaying(true);
+  };
+
+  // --- Neutral style additions ---
+  // Glassy, blurred, animated neutral gradient background
+  const bgGradient = currSong?.art
+    ? 'linear-gradient(120deg, #e5e7eb 0%, #a1a1aa 100%)'
+    : 'linear-gradient(120deg, #f4f4f5 0%, #a1a1aa 100%)';
+
+  // Animated gradient overlay (neutral tones)
+  const animatedGradient =
+    'before:content-[""] before:absolute before:inset-0 before:rounded-3xl before:bg-[conic-gradient(var(--tw-gradient-stops))] before:from-zinc-300/30 before:via-zinc-400/20 before:to-zinc-500/30 before:blur-2xl before:animate-spin-slow before:z-0';
+
   return (
-    <div className="flex flex-col gap-16 relative mx-auto mt-6 max-w-xl">
-      <audio
-        src={currSong ?? undefined}
-        ref={audioRef}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-      ></audio>
-      <div className="flex items-center justify-between">
-        <Button>
-          <FaStepBackward />
-        </Button>
-        <Button onClick={togglePlay}>
-          {isPlaying ? <FaPause /> : <FaPlay />}
-        </Button>
-        <Button>
-          <FaForwardStep />
-        </Button>
-      </div>
-      <div>
-        <Slider
-          value={[currentTime]}
-          max={duration}
-          onValueChange={(value) => handleSliderChange(value[0])}
+    <div
+      className="fixed inset-0 flex items-center justify-center transition-colors duration-700"
+      style={{
+        background: bgGradient,
+      }}
+    >
+      <div
+        className={`relative w-full max-w-2xl mx-auto rounded-3xl shadow-2xl p-10 flex flex-col gap-10 border border-white/20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl overflow-hidden ${animatedGradient}`}
+        style={{
+          boxShadow:
+            '0 8px 32px 0 rgba(161,161,170,0.18), 0 1.5px 8px 0 rgba(113,113,122,0.10)',
+        }}
+      >
+        {/* Volume Control - Top Right */}
+        <div className="absolute top-8 right-8 flex items-center gap-2 z-20">
+          <FaVolumeUp className="text-zinc-400 dark:text-zinc-300" />
+          <Slider
+            value={[volume]}
+            min={0}
+            max={1}
+            step={0.01}
+            onValueChange={(value) => setVolume(value[0])}
+            className="w-32"
+          />
+          <span className="text-xs w-8 text-zinc-500 dark:text-zinc-300">
+            {Math.round(volume * 100)}%
+          </span>
+        </div>
+
+        {/* Album Art & Song Info */}
+        <div className="flex items-center gap-8 z-10">
+          <div className="w-32 h-32 bg-zinc-200 dark:bg-zinc-800 rounded-2xl overflow-hidden flex-shrink-0 shadow-xl border-4 border-white/30 ring-4 ring-zinc-300/10">
+            {currSong?.art ? (
+              <img
+                src={currSong.art}
+                alt={currSong.name}
+                className="w-full h-full object-cover scale-105 transition-transform duration-500"
+                style={{ filter: 'drop-shadow(0 4px 24px #a1a1aa44)' }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-zinc-400">
+                No Art
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col justify-center gap-2">
+            <span className="font-extrabold text-3xl text-zinc-900 dark:text-white drop-shadow-lg tracking-tight">
+              {currSong?.name || 'No Song'}
+            </span>
+            <span className="text-zinc-600 dark:text-zinc-300 text-lg font-medium">
+              {currSong?.artist || ''}
+            </span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-widest">
+              {currSong?.genre || ''}
+            </span>
+          </div>
+        </div>
+
+        {/* Audio Element */}
+        <audio
+          src={currSong?.url}
+          ref={audioRef}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onEnded={playNext}
         />
-      </div>
-      <div>
-        {listOfSongs.map((song, index) => (
-          <div key={index} className="flex items-center justify-between">
-            <span>{song}</span>
+
+        {/* Controls */}
+        <div className="flex flex-col gap-6 z-10">
+          <div className="flex items-center justify-center gap-10">
             <Button
-              onClick={() => {
-                setIsPlaying(true);
-                setCurrSong(API + song);
+              variant="ghost"
+              size="icon"
+              onClick={playPrev}
+              disabled={listOfSongs.length === 0}
+              className="rounded-full bg-white/60 dark:bg-zinc-800/60 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition shadow"
+            >
+              <FaStepBackward className="text-2xl text-zinc-500 dark:text-zinc-300" />
+            </Button>
+            <Button
+              variant="default"
+              size="icon"
+              onClick={togglePlay}
+              disabled={!currSong}
+              className="rounded-full bg-gradient-to-br from-zinc-400 via-zinc-500 to-zinc-600 shadow-2xl hover:scale-110 transition border-4 border-white/30"
+              style={{
+                width: 72,
+                height: 72,
+                boxShadow:
+                  '0 4px 32px 0 rgba(161,161,170,0.18), 0 1.5px 8px 0 rgba(113,113,122,0.10)',
               }}
             >
-              Play
+              {isPlaying ? (
+                <FaPause className="text-3xl text-white drop-shadow" />
+              ) : (
+                <FaPlay className="text-3xl text-white drop-shadow" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={playNext}
+              disabled={listOfSongs.length === 0}
+              className="rounded-full bg-white/60 dark:bg-zinc-800/60 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition shadow"
+            >
+              <FaStepForward className="text-2xl text-zinc-500 dark:text-zinc-300" />
             </Button>
           </div>
-        ))}
+          {/* Progress Bar */}
+          <div className="flex items-center gap-4">
+            <span className="text-xs w-12 text-right text-zinc-500 dark:text-zinc-300 font-mono">
+              {formatTime(currentTime)}
+            </span>
+            <Slider
+              value={[currentTime]}
+              max={duration || 1}
+              step={1}
+              onValueChange={(value) => handleSliderChange(value[0])}
+              className="flex-1 accent-zinc-500"
+            />
+            <span className="text-xs w-12 text-zinc-500 dark:text-zinc-300 font-mono">
+              {formatTime(duration)}
+            </span>
+          </div>
+        </div>
+
+        {/* Song List */}
+        <div className="flex flex-col gap-1 mt-2 z-10">
+          {listOfSongs.map((song, idx) => (
+            <div
+              key={song.id}
+              className={`flex items-center justify-between px-4 py-2 rounded-xl cursor-pointer transition font-medium ${
+                idx === currIndex
+                  ? 'bg-gradient-to-r from-zinc-400/90 via-zinc-500/80 to-zinc-600/90 text-white shadow-lg scale-[1.03]'
+                  : 'hover:bg-zinc-200/70 dark:hover:bg-zinc-800/70 text-zinc-800 dark:text-zinc-200'
+              }`}
+              style={{
+                backdropFilter: idx === currIndex ? 'blur(2px)' : undefined,
+                border: idx === currIndex ? '2px solid #fff3' : undefined,
+              }}
+              onClick={() => {
+                setCurrIndex(idx);
+                setIsPlaying(true);
+              }}
+            >
+              <span className="truncate">
+                {song.artist} — {song.name}
+              </span>
+              {idx === currIndex && isPlaying && (
+                <FaPlay className="text-white drop-shadow" />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Subtle floating neutral blobs for extra flair */}
+        <div className="pointer-events-none absolute -top-20 -left-20 w-72 h-72 bg-zinc-300/30 rounded-full blur-3xl animate-pulse-slow z-0" />
+        <div className="pointer-events-none absolute -bottom-24 -right-24 w-80 h-80 bg-zinc-400/30 rounded-full blur-3xl animate-pulse-slower z-0" />
       </div>
     </div>
   );
