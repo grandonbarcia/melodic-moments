@@ -10,7 +10,6 @@ import {
   FaVolumeUp,
 } from 'react-icons/fa';
 import { useEffect, useRef, useState } from 'react';
-import { getListOfSongs } from '../actions/actions';
 
 type Song = {
   id: number;
@@ -28,23 +27,14 @@ function formatTime(sec: number) {
   return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 }
 
-export default function AudioPlayer() {
+export default function AudioPlayer({ songs }: { songs: Song[] }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [listOfSongs, setListOfSongs] = useState<Song[]>([]);
-  const [currIndex, setCurrIndex] = useState(0);
-  const [volume, setVolume] = useState(1);
+  const [listOfSongs, setListOfSongs] = useState<Song[]>(songs);
+  const [currIndex, setCurrIndex] = useState<number>(-1); // No song selected by default
+  const [volume, setVolume] = useState(0.5); // Set initial volume to 50%
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    const fetchListOfSongs = async () => {
-      const songs = await getListOfSongs();
-      setListOfSongs(songs);
-      setCurrIndex(0);
-    };
-    fetchListOfSongs();
-  }, []);
 
   useEffect(() => {
     setCurrentTime(0);
@@ -66,7 +56,7 @@ export default function AudioPlayer() {
     }
   }, [volume]);
 
-  const currSong = listOfSongs[currIndex];
+  const currSong = currIndex >= 0 ? listOfSongs[currIndex] : undefined;
 
   const togglePlay = () => setIsPlaying((p) => !p);
 
@@ -174,6 +164,8 @@ export default function AudioPlayer() {
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
           onEnded={playNext}
+          // Optionally, add a key to force remount when currSong changes
+          key={currSong?.id || 'no-song'}
         />
 
         {/* Controls */}
@@ -183,7 +175,7 @@ export default function AudioPlayer() {
               variant="ghost"
               size="icon"
               onClick={playPrev}
-              disabled={listOfSongs.length === 0}
+              disabled={listOfSongs.length === 0 || currIndex === -1}
               className="rounded-full bg-white/60 dark:bg-zinc-800/60 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition shadow"
             >
               <FaStepBackward className="text-2xl text-zinc-500 dark:text-zinc-300" />
@@ -211,7 +203,7 @@ export default function AudioPlayer() {
               variant="ghost"
               size="icon"
               onClick={playNext}
-              disabled={listOfSongs.length === 0}
+              disabled={listOfSongs.length === 0 || currIndex === -1}
               className="rounded-full bg-white/60 dark:bg-zinc-800/60 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition shadow"
             >
               <FaStepForward className="text-2xl text-zinc-500 dark:text-zinc-300" />

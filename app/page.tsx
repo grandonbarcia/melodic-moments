@@ -1,9 +1,12 @@
-'use client';
-import dynamic from 'next/dynamic';
+import { getListOfSongs } from './actions/actions';
+import AudioPlayer from './components/AudioPlayer';
 
-export default function Home() {
-  const AudioPlayer = dynamic(() => import('./components/AudioPlayer'), {
-    ssr: false,
-  });
-  return <AudioPlayer />;
+export default async function Home() {
+  const songs = await getListOfSongs();
+
+  return (
+    <main className="container">
+      <AudioPlayer songs={songs} />
+    </main>
+  );
 }
