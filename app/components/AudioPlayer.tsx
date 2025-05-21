@@ -11,6 +11,8 @@ import {
 } from 'react-icons/fa';
 import { useEffect, useRef, useState } from 'react';
 
+import Image from 'next/image';
+
 type Song = {
   id: number;
   created_at: string;
@@ -31,7 +33,7 @@ export default function AudioPlayer({ songs }: { songs: Song[] }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [listOfSongs, setListOfSongs] = useState<Song[]>(songs);
+  const [listOfSongs] = useState<Song[]>(songs);
   const [currIndex, setCurrIndex] = useState<number>(-1); // No song selected by default
   const [volume, setVolume] = useState(0.5); // Set initial volume to 50%
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -132,11 +134,14 @@ export default function AudioPlayer({ songs }: { songs: Song[] }) {
         <div className="flex items-center gap-8 z-10">
           <div className="w-32 h-32 bg-zinc-200 dark:bg-zinc-800 rounded-2xl overflow-hidden flex-shrink-0 shadow-xl border-4 border-white/30 ring-4 ring-zinc-300/10">
             {currSong?.art ? (
-              <img
+              <Image
                 src={currSong.art}
                 alt={currSong.name}
+                width={128}
+                height={128}
                 className="w-full h-full object-cover scale-105 transition-transform duration-500"
                 style={{ filter: 'drop-shadow(0 4px 24px #a1a1aa44)' }}
+                priority
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-zinc-400">
