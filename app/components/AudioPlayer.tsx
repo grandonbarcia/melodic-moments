@@ -1,17 +1,15 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import {
-  FaPlay,
-  FaPause,
-  FaStepBackward,
-  FaStepForward,
-  FaVolumeUp,
-} from 'react-icons/fa';
-import { useEffect, useRef, useState } from 'react';
-
-import Image from 'next/image';
+import { Card, CardContent } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Play, Pause, SkipBack, SkipForward, Volume2 } from 'lucide-react';
+import { Toggle } from '@/components/ui/toggle';
+import { Repeat, Shuffle } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 type Song = {
   id: number;
@@ -33,9 +31,10 @@ export default function AudioPlayer({ songs }: { songs: Song[] }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [listOfSongs] = useState<Song[]>(songs);
-  const [currIndex, setCurrIndex] = useState<number>(-1); // No song selected by default
-  const [volume, setVolume] = useState(0.5); // Set initial volume to 50%
+  const [currIndex, setCurrIndex] = useState<number>(-1);
+  const [volume, setVolume] = useState(0.5);
+  const [repeat, setRepeat] = useState(false);
+  const [shuffle, setShuffle] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -58,7 +57,7 @@ export default function AudioPlayer({ songs }: { songs: Song[] }) {
     }
   }, [volume]);
 
-  const currSong = currIndex >= 0 ? listOfSongs[currIndex] : undefined;
+  const currSong = currIndex >= 0 ? songs[currIndex] : undefined;
 
   const togglePlay = () => setIsPlaying((p) => !p);
 
@@ -81,207 +80,218 @@ export default function AudioPlayer({ songs }: { songs: Song[] }) {
   };
 
   const playPrev = () => {
-    setCurrIndex((i) => (i > 0 ? i - 1 : listOfSongs.length - 1));
+    setCurrIndex((i) => (i > 0 ? i - 1 : songs.length - 1));
     setIsPlaying(true);
   };
 
+  // Helper to get a random song index (excluding the current)
+  function getRandomSongIndex(exclude: number, length: number) {
+    if (length <= 1) return exclude;
+    let idx;
+    do {
+      idx = Math.floor(Math.random() * length);
+    } while (idx === exclude);
+    return idx;
+  }
+
+  // Modified playNext to handle shuffle and repeat
   const playNext = () => {
-    setCurrIndex((i) => (i < listOfSongs.length - 1 ? i + 1 : 0));
-    setIsPlaying(true);
+    if (repeat) {
+      // Repeat: play the current song from the beginning
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play();
+      }
+      setIsPlaying(true);
+    } else if (shuffle) {
+      // Shuffle: pick a random song (not the current)
+      const nextIdx = getRandomSongIndex(currIndex, songs.length);
+      setCurrIndex(nextIdx);
+      setIsPlaying(true);
+    } else {
+      // Normal: go to next song or loop to start
+      setCurrIndex((i) => (i < songs.length - 1 ? i + 1 : 0));
+      setIsPlaying(true);
+    }
   };
-
-  // --- Neutral style additions ---
-  // Glassy, blurred, animated neutral gradient background
-  const bgGradient = currSong?.art
-    ? 'linear-gradient(120deg, #e5e7eb 0%, #a1a1aa 100%)'
-    : 'linear-gradient(120deg, #f4f4f5 0%, #a1a1aa 100%)';
-
-  // Animated gradient overlay (neutral tones)
-  const animatedGradient =
-    'before:content-[""] before:absolute before:inset-0 before:rounded-3xl before:bg-[conic-gradient(var(--tw-gradient-stops))] before:from-zinc-300/30 before:via-zinc-400/20 before:to-zinc-500/30 before:blur-2xl before:animate-spin-slow before:z-0';
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center transition-colors duration-700"
-      style={{
-        background: bgGradient,
-      }}
-    >
-      <div
-        className={`relative w-full max-w-2xl mx-auto rounded-3xl shadow-2xl p-10 flex flex-col gap-10 border border-white/20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl overflow-hidden ${animatedGradient}`}
-        style={{
-          boxShadow:
-            '0 8px 32px 0 rgba(161,161,170,0.18), 0 1.5px 8px 0 rgba(113,113,122,0.10)',
-        }}
-      >
-        {/* Volume Control - Top Right */}
-        <div className="absolute top-8 right-8 flex items-center gap-2 z-20">
-          <FaVolumeUp className="text-zinc-400 dark:text-zinc-300" />
-          <Slider
-            value={[volume]}
-            min={0}
-            max={1}
-            step={0.01}
-            onValueChange={(value) => setVolume(value[0])}
-            className="w-32"
-          />
-          <span className="text-xs w-8 text-zinc-500 dark:text-zinc-300">
-            {Math.round(volume * 100)}%
-          </span>
-        </div>
-
-        {/* Album Art & Song Info */}
-        <div className="flex items-center gap-8 z-10">
-          <div className="w-32 h-32 bg-zinc-200 dark:bg-zinc-800 rounded-2xl overflow-hidden flex-shrink-0 shadow-xl border-4 border-white/30 ring-4 ring-zinc-300/10">
-            {currSong?.art ? (
-              <Image
-                src={currSong.art}
-                alt={currSong.name}
-                width={128}
-                height={128}
-                className="w-full h-full object-cover scale-105 transition-transform duration-500"
-                style={{ filter: 'drop-shadow(0 4px 24px #a1a1aa44)' }}
-                priority
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-zinc-400">
-                No Art
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col justify-center gap-2">
-            <span className="font-extrabold text-3xl text-zinc-900 dark:text-white drop-shadow-lg tracking-tight">
-              {currSong?.name || 'No Song'}
-            </span>
-            <span className="text-zinc-600 dark:text-zinc-300 text-lg font-medium">
-              {currSong?.artist || ''}
-            </span>
-            <span className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-widest">
-              {currSong?.genre || ''}
-            </span>
-          </div>
-        </div>
-
-        {/* Audio Element */}
-        <audio
-          src={currSong?.url}
-          ref={audioRef}
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onEnded={playNext}
-          // Optionally, add a key to force remount when currSong changes
-          key={currSong?.id || 'no-song'}
-        />
-
-        {/* Controls */}
-        <div className="flex flex-col gap-6 z-10">
-          <div className="flex items-center justify-center gap-10">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={playPrev}
-              disabled={listOfSongs.length === 0 || currIndex === -1}
-              className="rounded-full bg-white/60 dark:bg-zinc-800/60 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition shadow"
-            >
-              <FaStepBackward className="text-2xl text-zinc-500 dark:text-zinc-300" />
-            </Button>
-            <Button
-              variant="default"
-              size="icon"
-              onClick={togglePlay}
-              disabled={!currSong}
-              className="rounded-full bg-gradient-to-br from-zinc-400 via-zinc-500 to-zinc-600 shadow-2xl hover:scale-110 transition border-4 border-white/30"
-              style={{
-                width: 72,
-                height: 72,
-                boxShadow:
-                  '0 4px 32px 0 rgba(161,161,170,0.18), 0 1.5px 8px 0 rgba(113,113,122,0.10)',
-              }}
-            >
-              {isPlaying ? (
-                <FaPause className="text-3xl text-white drop-shadow" />
-              ) : (
-                <FaPlay className="text-3xl text-white drop-shadow" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={playNext}
-              disabled={listOfSongs.length === 0 || currIndex === -1}
-              className="rounded-full bg-white/60 dark:bg-zinc-800/60 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition shadow"
-            >
-              <FaStepForward className="text-2xl text-zinc-500 dark:text-zinc-300" />
-            </Button>
-          </div>
-          {/* Progress Bar */}
-          <div className="flex items-center gap-4">
-            <span className="text-xs w-12 text-right text-zinc-500 dark:text-zinc-300 font-mono">
-              {formatTime(currentTime)}
-            </span>
+    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-background to-muted/60">
+      <Card className="w-full max-w-2xl rounded-3xl shadow-2xl border bg-background/90 backdrop-blur-lg">
+        <CardContent className="p-8 flex flex-col gap-8 relative">
+          {/* Volume Control - Top Right */}
+          <div className="absolute top-8 right-8 flex items-center gap-3 z-10">
+            <Volume2 className="text-muted-foreground" />
             <Slider
-              value={[currentTime]}
-              max={duration || 1}
-              step={1}
-              onValueChange={(value) => handleSliderChange(value[0])}
-              className="flex-1 accent-zinc-500"
+              value={[volume]}
+              min={0}
+              max={1}
+              step={0.01}
+              onValueChange={(value) => setVolume(value[0])}
+              className="w-32"
+              aria-label="Volume"
             />
-            <span className="text-xs w-12 text-zinc-500 dark:text-zinc-300 font-mono">
-              {formatTime(duration)}
+            <span className="text-xs w-8 text-muted-foreground">
+              {Math.round(volume * 100)}%
             </span>
           </div>
-        </div>
 
-        {/* Song List */}
-        <div className="flex flex-col gap-1 mt-2 z-10">
-          {listOfSongs.map((song, idx) => (
-            <div
-              key={song.id}
-              className={`flex items-center justify-between px-4 py-2 rounded-xl cursor-pointer transition font-medium ${
-                idx === currIndex
-                  ? 'bg-gradient-to-r from-zinc-400/90 via-zinc-500/80 to-zinc-600/90 text-white shadow-lg scale-[1.03]'
-                  : 'hover:bg-zinc-200/70 dark:hover:bg-zinc-800/70 text-zinc-800 dark:text-zinc-200'
-              }`}
-              style={{
-                backdropFilter: idx === currIndex ? 'blur(2px)' : undefined,
-                border: idx === currIndex ? '2px solid #fff3' : undefined,
-              }}
-              onClick={() => {
-                setCurrIndex(idx);
-                setIsPlaying(true);
-              }}
-            >
-              <div className="flex flex-col flex-1 min-w-0">
-                <span
-                  className={`truncate font-semibold text-base leading-tight ${
-                    idx === currIndex
-                      ? 'text-white'
-                      : 'text-zinc-900 dark:text-zinc-100'
-                  }`}
-                >
-                  {song.name}
-                </span>
-                <span
-                  className={`truncate text-xs uppercase tracking-wider ${
-                    idx === currIndex
-                      ? 'text-zinc-200/80'
-                      : 'text-zinc-500 dark:text-zinc-400'
-                  }`}
-                >
-                  {song.artist}
-                </span>
-              </div>
-              {idx === currIndex && isPlaying && (
-                <FaPlay className="text-white drop-shadow ml-2" />
+          {/* Top: Song Info */}
+          <div className="flex items-center gap-6">
+            <Avatar className="w-28 h-28 rounded-xl shadow-lg border">
+              {currSong?.art ? (
+                <AvatarImage src={currSong.art} alt={currSong.name} />
+              ) : (
+                <AvatarFallback className="text-muted-foreground text-2xl">
+                  🎵
+                </AvatarFallback>
               )}
+            </Avatar>
+            <div className="flex flex-col gap-1 min-w-0">
+              <span className="font-bold text-2xl truncate">
+                {currSong?.name || 'No Song'}
+              </span>
+              <span className="text-muted-foreground text-lg truncate">
+                {currSong?.artist || ''}
+              </span>
+              <span className="text-xs text-muted-foreground uppercase tracking-widest">
+                {currSong?.genre || ''}
+              </span>
             </div>
-          ))}
-        </div>
+          </div>
 
-        {/* Subtle floating neutral blobs for extra flair */}
-        <div className="pointer-events-none absolute -top-20 -left-20 w-72 h-72 bg-zinc-300/30 rounded-full blur-3xl animate-pulse-slow z-0" />
-        <div className="pointer-events-none absolute -bottom-24 -right-24 w-80 h-80 bg-zinc-400/30 rounded-full blur-3xl animate-pulse-slower z-0" />
-      </div>
+          {/* Audio Element */}
+          <audio
+            src={currSong?.url}
+            ref={audioRef}
+            onTimeUpdate={handleTimeUpdate}
+            onLoadedMetadata={handleLoadedMetadata}
+            onEnded={playNext}
+            key={currSong?.id || 'no-song'}
+          />
+
+          {/* Controls */}
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-center gap-8">
+              <Toggle
+                pressed={repeat}
+                onPressedChange={setRepeat}
+                aria-label="Toggle repeat"
+              >
+                <Repeat
+                  className={repeat ? 'text-primary' : 'text-muted-foreground'}
+                />
+              </Toggle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={playPrev}
+                disabled={songs.length === 0 || currIndex === -1}
+                aria-label="Previous"
+              >
+                <SkipBack className="w-7 h-7" />
+              </Button>
+              <Button
+                variant="default"
+                size="icon"
+                onClick={togglePlay}
+                disabled={!currSong}
+                className="rounded-full shadow-lg"
+                style={{ width: 64, height: 64 }}
+                aria-label={isPlaying ? 'Pause' : 'Play'}
+              >
+                {isPlaying ? (
+                  <Pause className="w-8 h-8" />
+                ) : (
+                  <Play className="w-8 h-8" />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={playNext}
+                disabled={songs.length === 0 || currIndex === -1}
+                aria-label="Next"
+              >
+                <SkipForward className="w-7 h-7" />
+              </Button>
+              <Toggle
+                pressed={shuffle}
+                onPressedChange={setShuffle}
+                aria-label="Toggle shuffle"
+              >
+                <Shuffle
+                  className={shuffle ? 'text-primary' : 'text-muted-foreground'}
+                />
+              </Toggle>
+            </div>
+            {/* Progress Bar */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs w-12 text-right text-muted-foreground font-mono">
+                {formatTime(currentTime)}
+              </span>
+              <Slider
+                value={[currentTime]}
+                max={duration || 1}
+                step={1}
+                onValueChange={(value) => handleSliderChange(value[0])}
+                className="flex-1"
+              />
+              <span className="text-xs w-12 text-muted-foreground font-mono">
+                {formatTime(duration)}
+              </span>
+            </div>
+          </div>
+
+          {/* Player Controls - Repeat & Shuffle */}
+
+          {/* Song List */}
+          <ScrollArea className="h-80 w-full rounded-lg hover:shadow-lg bg-muted/30 mt-2 p-2">
+            <div className="flex flex-col gap-1 p-2">
+              {songs.map((song, idx) => (
+                <div key={song.id}>
+                  <div
+                    className={`flex items-center justify-center w-full min-w-0 px-3 py-4 rounded-lg cursor-pointer transition ${
+                      idx === currIndex
+                        ? 'bg-accent text-accent-foreground font-semibold'
+                        : 'hover:bg-muted text-muted-foreground'
+                    }`}
+                    onClick={() => {
+                      setCurrIndex(idx);
+                      setIsPlaying(true);
+                    }}
+                  >
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span
+                        className={`truncate font-semibold text-base leading-tight ${
+                          idx === currIndex
+                            ? 'text-accent-foreground'
+                            : 'text-foreground'
+                        }`}
+                      >
+                        {song.name}
+                      </span>
+                      <span
+                        className={`truncate text-xs uppercase tracking-wider ${
+                          idx === currIndex
+                            ? 'text-accent-foreground/80'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        {song.artist}
+                      </span>
+                    </div>
+                    {idx === currIndex && isPlaying && (
+                      <Play className="w-4 h-4 text-primary ml-2 flex-shrink-0" />
+                    )}
+                  </div>
+                  {idx < songs.length - 1 && <Separator className="my-1" />}
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
     </div>
   );
 }
