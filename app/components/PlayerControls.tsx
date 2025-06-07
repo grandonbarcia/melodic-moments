@@ -29,7 +29,7 @@ interface PlayerControlsProps {
   playPrev: () => void;
   playNext: () => void;
   togglePlay: () => void;
-  currSong: Song; // Replace 'any' with your song type if available
+  currSong: Song | undefined; // Replace 'any' with your song type if available
   currIndex: number;
   songs: Song[]; // Replace 'any' with your song type if available
   currentTime: number;
