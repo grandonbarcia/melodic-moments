@@ -34,9 +34,6 @@ export default function AudioPlayer({ songs }: { songs: Song[] }) {
   const [shuffle, setShuffle] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
 
   useEffect(() => {
     setCurrentTime(0);
@@ -57,7 +54,7 @@ export default function AudioPlayer({ songs }: { songs: Song[] }) {
     let analyser: AnalyserNode | undefined;
     const audioCtx = new AudioContext();
     const audio = audioRef.current;
-    if (isPlaying && audio) {
+    if (currIndex >= 0 && audio) {
       audio.play();
       audio.crossOrigin = 'anonymous';
       audioSrc = audioCtx.createMediaElementSource(audio);
@@ -75,7 +72,7 @@ export default function AudioPlayer({ songs }: { songs: Song[] }) {
       let x;
 
       function animate() {
-        let x = 0;
+        x = 0;
         ctx?.clearRect(0, 0, canvas!.width, canvas!.height);
         if (analyser) {
           analyser.getByteFrequencyData(dataArray);
