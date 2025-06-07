@@ -174,24 +174,25 @@ export default function AudioPlayer({ songs }: { songs: Song[] }) {
             onEnded={playNext}
             key={currSong?.id || 'no-song'}
           />
-          <PlayerControls
-            isPlaying={isPlaying}
-            setIsPlaying={setIsPlaying}
-            repeat={repeat}
-            setRepeat={setRepeat}
-            shuffle={shuffle}
-            setShuffle={setShuffle}
-            playPrev={playPrev}
-            playNext={playNext}
-            togglePlay={() => setIsPlaying((p) => !p)}
-            currSong={currSong}
-            currIndex={currIndex}
-            songs={songs}
-            currentTime={currentTime}
-            duration={duration}
-            handleSliderChange={handleSliderChange}
-            formatTime={formatTime}
-          />
+          {currSong && (
+            <PlayerControls
+              isPlaying={isPlaying}
+              repeat={repeat}
+              setRepeat={setRepeat}
+              shuffle={shuffle}
+              setShuffle={setShuffle}
+              playPrev={playPrev}
+              playNext={playNext}
+              togglePlay={() => setIsPlaying((p) => !p)}
+              currSong={currSong}
+              currIndex={currIndex}
+              songs={songs}
+              currentTime={currentTime}
+              duration={duration}
+              handleSliderChange={handleSliderChange}
+              formatTime={formatTime}
+            />
+          )}
           <SongList
             songs={songs}
             currIndex={currIndex}

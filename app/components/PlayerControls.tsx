@@ -10,9 +10,36 @@ import {
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 
+type Song = {
+  id: number;
+  created_at: string;
+  artist: string;
+  genre: string;
+  art: string;
+  name: string;
+  url: string;
+};
+
+interface PlayerControlsProps {
+  isPlaying: boolean;
+  repeat: boolean;
+  setRepeat: (value: boolean) => void;
+  shuffle: boolean;
+  setShuffle: (value: boolean) => void;
+  playPrev: () => void;
+  playNext: () => void;
+  togglePlay: () => void;
+  currSong: Song; // Replace 'any' with your song type if available
+  currIndex: number;
+  songs: Song[]; // Replace 'any' with your song type if available
+  currentTime: number;
+  duration: number;
+  handleSliderChange: (value: number) => void;
+  formatTime: (value: number) => string;
+}
+
 export default function PlayerControls({
   isPlaying,
-  setIsPlaying,
   repeat,
   setRepeat,
   shuffle,
@@ -27,7 +54,7 @@ export default function PlayerControls({
   duration,
   handleSliderChange,
   formatTime,
-}: any) {
+}: PlayerControlsProps) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-center gap-8">

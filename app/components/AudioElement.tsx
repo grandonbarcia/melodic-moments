@@ -5,4 +5,6 @@ const AudioElement = React.forwardRef<
   React.AudioHTMLAttributes<HTMLAudioElement>
 >((props, ref) => <audio ref={ref} {...props} />);
 
+AudioElement.displayName = 'AudioElement';
+
 export default AudioElement;
