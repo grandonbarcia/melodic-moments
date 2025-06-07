@@ -33,6 +33,10 @@ export default function AudioPlayer({ songs }: { songs: Song[] }) {
   const [repeat, setRepeat] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
 
   useEffect(() => {
     setCurrentTime(0);
@@ -46,7 +50,59 @@ export default function AudioPlayer({ songs }: { songs: Song[] }) {
     } else if (audio) {
       audio.pause();
     }
-  }, [isPlaying, currIndex]);
+  }, [isPlaying]);
+
+  useEffect(() => {
+    let audioSrc: MediaElementAudioSourceNode | undefined;
+    let analyser: AnalyserNode | undefined;
+    const audioCtx = new AudioContext();
+    const audio = audioRef.current;
+    if (isPlaying && audio) {
+      audio.play();
+      audio.crossOrigin = 'anonymous';
+      audioSrc = audioCtx.createMediaElementSource(audio);
+      analyser = audioCtx.createAnalyser();
+      audioSrc.connect(analyser);
+      analyser.connect(audioCtx.destination);
+      analyser.fftSize = 32;
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      const canvas = canvasRef.current;
+      const ctx = canvas ? canvas.getContext('2d') : null;
+      const barWidth = (canvas ? canvas.width / 2 : 0) / bufferLength;
+      let barHeight;
+      let x;
+
+      function animate() {
+        let x = 0;
+        ctx?.clearRect(0, 0, canvas!.width, canvas!.height);
+        if (analyser) {
+          analyser.getByteFrequencyData(dataArray);
+        }
+        for (let i = 0; i < bufferLength; i++) {
+          barHeight = dataArray[i] / 2; // Scale down for visibility
+          ctx!.fillStyle = 'black';
+          ctx!.fillRect(
+            canvas!.width / 2 - x,
+            canvas!.height - barHeight,
+            barWidth,
+            barHeight
+          );
+          x += barWidth;
+        }
+        for (let i = 0; i < bufferLength; i++) {
+          barHeight = dataArray[i] / 2; // Scale down for visibility
+          ctx!.fillStyle = 'black';
+          ctx!.fillRect(x, canvas!.height - barHeight, barWidth, barHeight);
+          x += barWidth;
+        }
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+    }
+  }, [currIndex]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -112,6 +168,7 @@ export default function AudioPlayer({ songs }: { songs: Song[] }) {
         <CardContent className="p-8 flex flex-col gap-8 relative">
           <VolumeControl volume={volume} setVolume={setVolume} />
           <SongInfo currSong={currSong} />
+          <canvas ref={canvasRef} className="h-[200] w-full" />
           <AudioElement
             src={currSong?.url}
             ref={audioRef}
