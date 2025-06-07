@@ -165,7 +165,7 @@ export default function AudioPlayer({ songs }: { songs: Song[] }) {
         <CardContent className="p-8 flex flex-col gap-8 relative">
           <VolumeControl volume={volume} setVolume={setVolume} />
           <SongInfo currSong={currSong} />
-          <canvas ref={canvasRef} className="h-[200] w-full" />
+          <canvas ref={canvasRef} className="h-[100px] w-full" />
           <AudioElement
             src={currSong?.url}
             ref={audioRef}
